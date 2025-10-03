@@ -533,6 +533,8 @@
     const winFrames = Math.max(8, Math.floor(framesPerSecond * beatSec)); // at least ~8 frames
 
     const chords = [];
+    let lastLabel = null;
+
     for (let i = 0; i < chromaSeries.length; i += winFrames) {
       const end = Math.min(chromaSeries.length - 1, i + winFrames - 1);
       const cMean = new Float32Array(12);
@@ -569,8 +571,12 @@
       const conf = best.score; // already normalized-ish by chroma sum
       const label = conf >= 0.12 ? best.chord : "N";
 
-      const startSec = i / framesPerSecond;
-      chords.push({ start: startSec, chord: label, confidence: Math.min(1, conf) });
+      // Only emit when the chord changes from the last emitted label
+      if (label !== lastLabel) {
+        const startSec = i / framesPerSecond;
+        chords.push({ start: startSec, chord: label, confidence: Math.min(1, conf) });
+        lastLabel = label;
+      }
     }
 
     return chords;
