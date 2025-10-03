@@ -830,20 +830,23 @@
       return;
     }
 
+    // Scale to max bar = 100%
+    const maxVal = sorted.reduce((m, [, v]) => Math.max(m, v), 0) || 1;
+
     for (const [label, total] of sorted) {
       const item = document.createElement("div");
       item.className = "freq-item";
 
       const line = document.createElement("div");
       line.className = "freq-line";
-      const pctVal = Math.max(0, Math.round((total / dur) * 100));
-      line.style.height = `${pctVal}%`;
-      line.style.minHeight = pctVal > 0 ? "4px" : "0px";
+      const heightPct = Math.max(0, Math.round((total / maxVal) * 100));
+      line.style.height = `${heightPct}%`;
+      line.style.minHeight = heightPct > 0 ? "4px" : "0px";
       line.style.background = chordColor(label);
 
       const pct = document.createElement("div");
       pct.className = "freq-percentage";
-      pct.textContent = `${pctVal}%`;
+      pct.textContent = `${heightPct}%`;
 
       const cap = document.createElement("div");
       cap.className = "freq-label";
