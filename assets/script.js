@@ -850,7 +850,8 @@
 
       const pct = document.createElement("div");
       pct.className = "freq-percentage";
-      pct.textContent = `${heightPct}%`;
+      const sharePct = Math.max(0, Math.round((total / dur) * 100));
+      pct.textContent = `${sharePct}%`;
 
       const cap = document.createElement("div");
       cap.className = "freq-label";
