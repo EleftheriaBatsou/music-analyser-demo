@@ -837,6 +837,10 @@
       const item = document.createElement("div");
       item.className = "freq-item";
 
+      // Wrap for full-height bar area
+      const barWrap = document.createElement("div");
+      barWrap.className = "freq-barwrap";
+
       const line = document.createElement("div");
       line.className = "freq-line";
       const heightPct = Math.max(0, Math.round((total / maxVal) * 100));
@@ -852,7 +856,8 @@
       cap.className = "freq-label";
       cap.textContent = shortChordLabel(label);
 
-      item.appendChild(line);
+      barWrap.appendChild(line);
+      item.appendChild(barWrap);
       item.appendChild(pct);
       item.appendChild(cap);
       fq.appendChild(item);

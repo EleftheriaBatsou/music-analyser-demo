@@ -268,9 +268,22 @@ footer {
   align-items: center;
   justify-content: flex-end;
   min-width: 32px;
+  height: 100%; /* ensure percentage heights inside use the container height */
 }
 
+/* Wrapper that spans full chart height so bars can be sized correctly */
+.freq-barwrap {
+  position: relative;
+  height: 100%;
+  width: 16px; /* room for bar and slight padding */
+}
+
+/* The actual bar, anchored to bottom, height set via JS */
 .freq-line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 8px;
   border-radius: 4px;
   background: #888;
