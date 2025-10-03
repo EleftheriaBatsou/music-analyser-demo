@@ -160,7 +160,7 @@ footer {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  height: 180px;
+  height: 220px;
   padding: 8px;
   background: #fff;
   border: 1px solid rgba(35, 39, 47, 0.1);
@@ -181,8 +181,14 @@ footer {
   background: #888;
 }
 
+.freq-percentage {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: #666;
+}
+
 .freq-label {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 0.75rem;
   color: #444;
   text-align: center;

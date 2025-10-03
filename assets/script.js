@@ -11,7 +11,6 @@
   const resultsEl = document.getElementById("results");
   const bpmEl = document.getElementById("bpmResults");
   const structureEl = document.getElementById("structureResults");
-  const chordsEl = document.getElementById("chordResults");
   const chordTimelineEl = document.getElementById("chordTimeline");
   const chordFrequencyEl = document.getElementById("chordFrequency");
   const audioPlayer = document.getElementById("audioPlayer");
@@ -59,9 +58,10 @@
   function resetUI() {
     bpmEl.textContent = "";
     structureEl.textContent = "";
-    chordsEl.textContent = "";
     statusEl.style.display = "none";
     resultsEl.style.display = "none";
+    if (chordTimelineEl) chordTimelineEl.innerHTML = "";
+    if (chordFrequencyEl) chordFrequencyEl.innerHTML = "";
   }
 
   function setStatus(text) {
@@ -103,25 +103,14 @@
       structureEl.textContent = "No clear segments detected.";
     }
 
-    // Chords
+    // Chords visualizations only (no textual progression)
     if (analysis.chords && analysis.chords.length > 0) {
-      const items = analysis.chords.slice(0, 120).map((c) => {
-        return `<li>${fmtTime(c.start)}: ${c.chord}${c.confidence != null ? ` (${Math.round(c.confidence * 100)}%)` : ""}</li>`;
-      });
-      const truncatedNote =
-        analysis.chords.length > 120
-          ? `<p class="small">Showing first 120 chords only.</p>`
-          : "";
-      chordsEl.innerHTML = `<ul class="list">${items.join("")}</ul>${truncatedNote}`;
-
-      // Visualizations
       renderChordTimeline(analysis.chords, analysis.duration);
       renderChordFrequency(analysis.chords, analysis.duration);
     } else {
-      chordsEl.textContent = "No chords detected.";
       const tl = document.getElementById("chordTimeline");
       const fq = document.getElementById("chordFrequency");
-      if (tl) tl.innerHTML = "";
+      if (tl) tl.innerHTML = "<p class='small'>No chords detected.</p>";
       if (fq) fq.innerHTML = "";
     }
   }
@@ -622,7 +611,7 @@
     tl.innerHTML = "";
 
     const dur = Math.max(0.1, duration || (chords[chords.length - 1]?.start || 0));
-    const pxPerSec = Math.min(14, Math.max(4, 600 / dur));
+    const pxPerSec = Math.min(18, Math.max(6, 1000 / dur));
     const height = Math.round(pxPerSec * dur);
     tl.style.height = `${height}px`;
 
@@ -681,20 +670,32 @@
     fq.style.display = "flex";
     fq.style.alignItems = "flex-end";
 
+    if (sorted.length === 0) {
+      fq.innerHTML = "<p class=\"small\">No chord frequency data.</p>";
+      return;
+    }
+
     for (const [label, total] of sorted) {
       const item = document.createElement("div");
       item.className = "freq-item";
 
       const line = document.createElement("div");
       line.className = "freq-line";
-      line.style.height = `${Math.round((total / dur) * 100)}%`;
+      const pctVal = Math.max(0, Math.round((total / dur) * 100));
+      line.style.height = `${pctVal}%`;
+      line.style.minHeight = pctVal > 0 ? "4px" : "0px";
       line.style.background = chordColor(label);
+
+      const pct = document.createElement("div");
+      pct.className = "freq-percentage";
+      pct.textContent = `${pctVal}%`;
 
       const cap = document.createElement("div");
       cap.className = "freq-label";
       cap.textContent = shortChordLabel(label);
 
       item.appendChild(line);
+      item.appendChild(pct);
       item.appendChild(cap);
       fq.appendChild(item);
     }
