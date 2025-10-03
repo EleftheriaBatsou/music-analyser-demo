@@ -199,8 +199,10 @@ footer {
 /* Moving playhead on the timeline */
 .timeline-playhead {
   position: absolute;
-  left: 0;
-  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px; /* extend across the card area */
+  max-width: 300px; /* cap width at 300px */
   height: 2px;
   background: #ef4444; /* red accent */
   box-shadow: 0 0 0 1px rgba(239,68,68,0.2), 0 1px 4px rgba(239,68,68,0.25);
