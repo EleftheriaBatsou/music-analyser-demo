@@ -612,7 +612,7 @@
 
     const dur = Math.max(0.1, duration || (chords[chords.length - 1]?.start || 0));
     const pxPerSec = Math.min(18, Math.max(6, 1000 / dur));
-    const height = Math.round(pxPerSec * dur);
+    const height = Math.max(500, Math.round(pxPerSec * dur));
     tl.style.height = `${height}px`;
 
     // Minute ticks
@@ -625,25 +625,46 @@
       tl.appendChild(tick);
     }
 
-    // Blocks
+    // Blocks + alternating labels
+    let sideLeft = true; // alternate between left/right for labels
     for (let i = 0; i < chords.length; i++) {
       const start = chords[i].start;
       const end = i < chords.length - 1 ? chords[i + 1].start : dur;
       const h = Math.max(2, Math.round((end - start) * pxPerSec));
       const top = Math.round(start * pxPerSec);
+      const color = chordColor(chords[i].chord);
+      const short = shortChordLabel(chords[i].chord);
+      const neutral = short === "N";
 
+      // Segment block
       const block = document.createElement("div");
       block.className = "timeline-block";
+      if (neutral) block.classList.add("neutral");
       block.style.top = `${top}px`;
       block.style.height = `${h}px`;
-      block.style.background = chordColor(chords[i].chord);
-
-      const label = document.createElement("span");
-      label.className = "timeline-label";
-      label.textContent = shortChordLabel(chords[i].chord);
-
-      block.appendChild(label);
+      block.style.background = neutral ? "" : color;
       tl.appendChild(block);
+
+      // Label (outside, alternating sides)
+      const side = sideLeft ? "left" : "right";
+      sideLeft = !sideLeft;
+
+      const label = document.createElement("div");
+      label.className = `timeline-label ${side}${neutral ? " neutral" : ""}`;
+      label.style.top = `${top + Math.round(h / 2)}px`;
+      if (!neutral) {
+        if (side === "left") label.style.borderLeftColor = color;
+        else label.style.borderRightColor = color;
+      }
+      label.textContent = short;
+      tl.appendChild(label);
+
+      // Connector line from center to label
+      const connector = document.createElement("div");
+      connector.className = `timeline-connector ${side}`;
+      connector.style.top = `${top + Math.round(h / 2)}px`;
+      connector.style.background = neutral ? "rgba(35,39,47,0.12)" : color;
+      tl.appendChild(connector);
     }
   }
 

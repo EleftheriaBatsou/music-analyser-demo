@@ -120,12 +120,11 @@ footer {
 /* Chord timeline (vertical) */
 .timeline {
   position: relative;
-  width: 140px;
-  border-left: 2px solid rgba(35,39,47,0.2);
-  border-right: 2px solid rgba(35,39,47,0.2);
-  border-radius: 8px;
-  background: #fff;
-  margin: 0.5rem 0;
+  width: 16px;
+  margin: 0.5rem auto;
+  border-radius: 10px;
+  background: #f7f9fc;
+  box-shadow: inset 0 0 0 1px rgba(35,39,47,0.08);
   /* Height set dynamically via JS */
 }
 
@@ -133,23 +132,65 @@ footer {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px solid rgba(0,0,0,0.05);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.timeline-block.neutral {
+  background: #e9edf3;
 }
 
 .timeline-label {
   position: absolute;
-  left: 6px;
-  top: 4px;
-  font-size: 0.8rem;
-  color: #222;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  top: 0;
+  transform: translateY(-50%);
+  background: #fff;
+  border: 1px solid rgba(35,39,47,0.12);
+  border-radius: 10px;
+  padding: 4px 8px;
+  font-size: 0.82rem;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(42,54,96,0.1);
+  white-space: nowrap;
+}
+
+.timeline-label.left {
+  right: calc(100% + 12px);
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.timeline-label.right {
+  left: calc(100% + 12px);
+  border-right-width: 4px;
+  border-right-style: solid;
+}
+
+.timeline-label.neutral {
+  color: #6b7280;
+  border-color: rgba(35,39,47,0.08);
+}
+
+.timeline-connector {
+  position: absolute;
+  top: 0;
+  height: 1px;
+  width: 12px;
+  background: #cbd5e1;
+}
+
+.timeline-connector.left {
+  right: 100%;
+}
+
+.timeline-connector.right {
+  left: 100%;
 }
 
 .timeline-tick {
   position: absolute;
-  left: -8px;
-  width: calc(100% + 16px);
+  left: 0;
+  width: 100%;
   border-top: 1px dashed rgba(35,39,47,0.15);
   font-size: 0.7rem;
   color: #666;
