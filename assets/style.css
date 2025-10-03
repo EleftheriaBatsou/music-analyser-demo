@@ -60,3 +60,59 @@ footer {
   }
 
 }
+
+/* New UI styles */
+.uploader {
+  margin: 1rem 0 2rem 0;
+  padding: 1rem 1.2rem;
+  border: 2px dashed rgba(35, 39, 47, 0.2);
+  border-radius: 12px;
+  background: #fbfbfd;
+}
+
+.uploader input[type="file"] {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.uploader .hint {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.card {
+  margin: 1rem 0;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid rgba(35, 39, 47, 0.1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.results .card h2 {
+  margin-top: 0;
+}
+
+.badge {
+  display: inline-block;
+  background: #23272f;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+  margin-right: 0.4rem;
+}
+
+.small {
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.list {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1rem;
+}
+
+.list li {
+  margin: 0.15rem 0;
+}

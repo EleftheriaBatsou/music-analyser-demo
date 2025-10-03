@@ -8,7 +8,37 @@
 </head>
 <body>
   <main>
-    <h1>Welcome to Your Static Site</h1>
+    <h1>Audio Analyzer</h1>
+    <p>Upload an MP3 (or any audio file) and get an estimated BPM, rough song structure, and likely chord progression.</p>
+
+    <section id="uploader" class="uploader">
+      <input id="fileInput" type="file" accept="audio/*" />
+      <p class="hint">Supported: mp3, wav, m4a, etc. Processing happens entirely in your browser.</p>
+    </section>
+
+    <section id="playerSection" class="card" style="display:none;">
+      <h2>Preview</h2>
+      <audio id="audioPlayer" controls></audio>
+    </section>
+
+    <section id="status" class="card" style="display:none;"></section>
+
+    <section id="results" class="results" style="display:none;">
+      <div class="card">
+        <h2>BPM</h2>
+        <div id="bpmResults"></div>
+      </div>
+
+      <div class="card">
+        <h2>Song Structure (rough)</h2>
+        <div id="structureResults"></div>
+      </div>
+
+      <div class="card">
+        <h2>Chord Progression (estimated)</h2>
+        <div id="chordResults"></div>
+      </div>
+    </section>
   </main>
   <footer>
     <p>&copy; 2025 Your Name</p>
