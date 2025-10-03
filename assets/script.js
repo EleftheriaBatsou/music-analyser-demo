@@ -18,9 +18,11 @@
 
   const timelineScaleInput = document.getElementById("timelineScale");
   const timelineScaleValueEl = document.getElementById("timelineScaleValue");
+  const timelinePlayButton = document.getElementById("timelinePlay");
 
   let audioCtx;
   let lastAnalysis = null;
+  let rafId = null;
 
   function getTimelineScale() {
     if (!timelineScaleInput) return null;
@@ -40,9 +42,68 @@
       updateTimelineScaleLabel();
       if (lastAnalysis && lastAnalysis.chords && lastAnalysis.chords.length) {
         renderChordTimeline(lastAnalysis.chords, lastAnalysis.duration, getTimelineScale());
+        updatePlayheadPosition(); // keep playhead aligned after scale changes
       }
     });
     updateTimelineScaleLabel();
+  }
+
+  // Play/pause button for timeline
+  function updateTimelinePlayButton() {
+    if (!timelinePlayButton) return;
+    timelinePlayButton.textContent = audioPlayer && !audioPlayer.paused ? "Pause" : "Play";
+  }
+
+  if (timelinePlayButton) {
+    timelinePlayButton.addEventListener("click", () => {
+      if (!audioPlayer) return;
+      if (audioPlayer.paused) audioPlayer.play();
+      else audioPlayer.pause();
+    });
+  }
+
+  // Playhead animation
+  function updatePlayheadPosition() {
+    if (!chordTimelineEl) return;
+    const ph = chordTimelineEl.querySelector(".timeline-playhead");
+    if (!ph) return;
+
+    const pxPerSec = parseFloat(chordTimelineEl.dataset.pxPerSec || "0") || 0;
+    const dur = parseFloat(chordTimelineEl.dataset.duration || "0") || (audioPlayer?.duration || 0);
+    const ct = Math.max(0, Math.min(dur, audioPlayer?.currentTime || 0));
+    const y = Math.round(ct * pxPerSec);
+    ph.style.top = `${y}px`;
+  }
+
+  function startPlayheadAnimation() {
+    cancelAnimationFrame(rafId);
+    const step = () => {
+      updatePlayheadPosition();
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+
+  function stopPlayheadAnimation() {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  if (audioPlayer) {
+    audioPlayer.addEventListener("play", () => {
+      updateTimelinePlayButton();
+      startPlayheadAnimation();
+    });
+    audioPlayer.addEventListener("pause", () => {
+      updateTimelinePlayButton();
+      stopPlayheadAnimation();
+    });
+    audioPlayer.addEventListener("ended", () => {
+      updateTimelinePlayButton();
+      stopPlayheadAnimation();
+    });
+    audioPlayer.addEventListener("timeupdate", updatePlayheadPosition);
+    audioPlayer.addEventListener("seeked", updatePlayheadPosition);
   }
 
   if (!fileInput) {
@@ -90,6 +151,10 @@
     resultsEl.style.display = "none";
     if (chordTimelineEl) chordTimelineEl.innerHTML = "";
     if (chordFrequencyEl) chordFrequencyEl.innerHTML = "";
+    if (timelinePlayButton) {
+      timelinePlayButton.disabled = true;
+      timelinePlayButton.textContent = "Play";
+    }
     lastAnalysis = null;
   }
 
@@ -137,11 +202,21 @@
       const scale = getTimelineScale();
       renderChordTimeline(analysis.chords, analysis.duration, scale);
       renderChordFrequency(analysis.chords, analysis.duration);
+
+      if (timelinePlayButton) {
+        timelinePlayButton.disabled = false;
+        updateTimelinePlayButton();
+      }
+      updatePlayheadPosition();
     } else {
       const tl = document.getElementById("chordTimeline");
       const fq = document.getElementById("chordFrequency");
       if (tl) tl.innerHTML = "<p class='small'>No chords detected.</p>";
       if (fq) fq.innerHTML = "";
+      if (timelinePlayButton) {
+        timelinePlayButton.disabled = true;
+        timelinePlayButton.textContent = "Play";
+      }
     }
   }
 
@@ -647,6 +722,10 @@
     const height = Math.max(600, Math.round(pxPerSec * dur));
     tl.style.height = `${height}px`;
 
+    // Expose metrics for playhead updates
+    tl.dataset.pxPerSec = String(pxPerSec);
+    tl.dataset.duration = String(dur);
+
     // Minute ticks
     const minutes = Math.floor(dur / 60);
     for (let m = 1; m <= minutes; m++) {
@@ -715,6 +794,12 @@
       connector.style.background = neutral ? "rgba(35,39,47,0.12)" : color;
       tl.appendChild(connector);
     }
+
+    // Add playhead line
+    const ph = document.createElement("div");
+    ph.className = "timeline-playhead";
+    ph.style.top = "0px";
+    tl.appendChild(ph);
   }
 
   function renderChordFrequency(chords, duration) {

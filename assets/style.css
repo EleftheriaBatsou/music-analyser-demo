@@ -196,6 +196,18 @@ footer {
   color: #666;
 }
 
+/* Moving playhead on the timeline */
+.timeline-playhead {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #ef4444; /* red accent */
+  box-shadow: 0 0 0 1px rgba(239,68,68,0.2), 0 1px 4px rgba(239,68,68,0.25);
+  z-index: 3;
+  pointer-events: none;
+}
+
 /* Controls under timeline */
 .controls {
   display: flex;
@@ -206,6 +218,36 @@ footer {
 
 .controls input[type="range"] {
   flex: 1;
+}
+
+/* Timeline actions (play/pause) */
+.timeline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 0 8px 0;
+}
+
+.btn {
+  appearance: none;
+  border: none;
+  background: #23272f;
+  color: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(42,54,96,0.12);
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #1f2430;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Frequency lines */
