@@ -40,6 +40,11 @@
         <h2>Chord Timeline</h2>
         <div id="chordTimeline" class="timeline"></div>
         <p class="small">Vertical time axis: top = start, bottom = end. Colors indicate chord.</p>
+        <div class="controls">
+          <label for="timelineScale" class="small">Scale</label>
+          <input id="timelineScale" type="range" min="8" max="40" step="1" value="18" />
+          <span id="timelineScaleValue" class="small">18 px/s</span>
+        </div>
       </div>
 
       <div class="card">

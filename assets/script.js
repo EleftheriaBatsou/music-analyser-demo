@@ -16,12 +16,39 @@
   const audioPlayer = document.getElementById("audioPlayer");
   const playerSection = document.getElementById("playerSection");
 
+  const timelineScaleInput = document.getElementById("timelineScale");
+  const timelineScaleValueEl = document.getElementById("timelineScaleValue");
+
+  let audioCtx;
+  let lastAnalysis = null;
+
+  function getTimelineScale() {
+    if (!timelineScaleInput) return null;
+    const v = parseFloat(timelineScaleInput.value || "18");
+    return isNaN(v) ? null : v;
+  }
+
+  function updateTimelineScaleLabel() {
+    if (timelineScaleInput && timelineScaleValueEl) {
+      const v = getTimelineScale() || 0;
+      timelineScaleValueEl.textContent = `${v} px/s`;
+    }
+  }
+
+  if (timelineScaleInput) {
+    timelineScaleInput.addEventListener("input", () => {
+      updateTimelineScaleLabel();
+      if (lastAnalysis && lastAnalysis.chords && lastAnalysis.chords.length) {
+        renderChordTimeline(lastAnalysis.chords, lastAnalysis.duration, getTimelineScale());
+      }
+    });
+    updateTimelineScaleLabel();
+  }
+
   if (!fileInput) {
     console.warn("Audio analyzer UI not present.");
     return;
   }
-
-  let audioCtx;
 
   fileInput.addEventListener("change", async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -46,6 +73,7 @@
       setStatus("Analyzing... This can take a few seconds for longer files.");
 
       const analysis = await analyzeAudioBuffer(audioBuffer);
+      lastAnalysis = analysis;
 
       renderResults(analysis);
       clearStatus();
@@ -62,6 +90,7 @@
     resultsEl.style.display = "none";
     if (chordTimelineEl) chordTimelineEl.innerHTML = "";
     if (chordFrequencyEl) chordFrequencyEl.innerHTML = "";
+    lastAnalysis = null;
   }
 
   function setStatus(text) {
@@ -105,7 +134,8 @@
 
     // Chords visualizations only (no textual progression)
     if (analysis.chords && analysis.chords.length > 0) {
-      renderChordTimeline(analysis.chords, analysis.duration);
+      const scale = getTimelineScale();
+      renderChordTimeline(analysis.chords, analysis.duration, scale);
       renderChordFrequency(analysis.chords, analysis.duration);
     } else {
       const tl = document.getElementById("chordTimeline");
@@ -605,14 +635,16 @@
     return quality === "minor" ? `${root}min` : `${root}maj`;
   }
 
-  function renderChordTimeline(chords, duration) {
+  function renderChordTimeline(chords, duration, forcedScale) {
     const tl = document.getElementById("chordTimeline");
     if (!tl) return;
     tl.innerHTML = "";
 
     const dur = Math.max(0.1, duration || (chords[chords.length - 1]?.start || 0));
-    const pxPerSec = Math.min(18, Math.max(6, 1000 / dur));
-    const height = Math.max(500, Math.round(pxPerSec * dur));
+    const pxPerSec = (typeof forcedScale === "number" && forcedScale > 0)
+      ? forcedScale
+      : Math.min(22, Math.max(8, 1200 / dur));
+    const height = Math.max(600, Math.round(pxPerSec * dur));
     tl.style.height = `${height}px`;
 
     // Minute ticks
@@ -627,10 +659,14 @@
 
     // Blocks + alternating labels
     let sideLeft = true; // alternate between left/right for labels
+    const MIN_LABEL_GAP = 18;
+    let lastLeftY = -Infinity;
+    let lastRightY = -Infinity;
+
     for (let i = 0; i < chords.length; i++) {
       const start = chords[i].start;
       const end = i < chords.length - 1 ? chords[i + 1].start : dur;
-      const h = Math.max(2, Math.round((end - start) * pxPerSec));
+      const h = Math.max(6, Math.round((end - start) * pxPerSec));
       const top = Math.round(start * pxPerSec);
       const color = chordColor(chords[i].chord);
       const short = shortChordLabel(chords[i].chord);
@@ -649,9 +685,22 @@
       const side = sideLeft ? "left" : "right";
       sideLeft = !sideLeft;
 
+      let labelTop = top + Math.round(h / 2);
+      if (side === "left") {
+        if (labelTop - lastLeftY < MIN_LABEL_GAP) {
+          labelTop = lastLeftY + MIN_LABEL_GAP;
+        }
+        lastLeftY = labelTop;
+      } else {
+        if (labelTop - lastRightY < MIN_LABEL_GAP) {
+          labelTop = lastRightY + MIN_LABEL_GAP;
+        }
+        lastRightY = labelTop;
+      }
+
       const label = document.createElement("div");
       label.className = `timeline-label ${side}${neutral ? " neutral" : ""}`;
-      label.style.top = `${top + Math.round(h / 2)}px`;
+      label.style.top = `${labelTop}px`;
       if (!neutral) {
         if (side === "left") label.style.borderLeftColor = color;
         else label.style.borderRightColor = color;
@@ -659,10 +708,10 @@
       label.textContent = short;
       tl.appendChild(label);
 
-      // Connector line from center to label
+      // Connector line from center to label (aligned to labelTop)
       const connector = document.createElement("div");
       connector.className = `timeline-connector ${side}`;
-      connector.style.top = `${top + Math.round(h / 2)}px`;
+      connector.style.top = `${labelTop}px`;
       connector.style.background = neutral ? "rgba(35,39,47,0.12)" : color;
       tl.appendChild(connector);
     }

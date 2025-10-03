@@ -196,6 +196,18 @@ footer {
   color: #666;
 }
 
+/* Controls under timeline */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.controls input[type="range"] {
+  flex: 1;
+}
+
 /* Frequency lines */
 .freq-container {
   display: flex;
