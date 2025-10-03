@@ -12,6 +12,8 @@
   const bpmEl = document.getElementById("bpmResults");
   const structureEl = document.getElementById("structureResults");
   const chordsEl = document.getElementById("chordResults");
+  const chordTimelineEl = document.getElementById("chordTimeline");
+  const chordFrequencyEl = document.getElementById("chordFrequency");
   const audioPlayer = document.getElementById("audioPlayer");
   const playerSection = document.getElementById("playerSection");
 
@@ -111,8 +113,16 @@
           ? `<p class="small">Showing first 120 chords only.</p>`
           : "";
       chordsEl.innerHTML = `<ul class="list">${items.join("")}</ul>${truncatedNote}`;
+
+      // Visualizations
+      renderChordTimeline(analysis.chords, analysis.duration);
+      renderChordFrequency(analysis.chords, analysis.duration);
     } else {
       chordsEl.textContent = "No chords detected.";
+      const tl = document.getElementById("chordTimeline");
+      const fq = document.getElementById("chordFrequency");
+      if (tl) tl.innerHTML = "";
+      if (fq) fq.innerHTML = "";
     }
   }
 
@@ -580,6 +590,114 @@
     }
 
     return chords;
+  }
+
+// Color mapping by chord label
+  function chordColor(label) {
+    if (!label || label === "N") {
+      return "hsl(0, 0%, 78%)";
+    }
+    const parts = label.split(" ");
+    const root = parts[0]; // e.g., "C", "C#", "D"
+    const quality = (parts[1] || "").toLowerCase(); // "major" | "minor"
+    const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+    const pc = names.indexOf(root);
+    const hue = pc >= 0 ? Math.round((pc / 12) * 360) : 0;
+    const sat = quality === "minor" ? 55 : 65;
+    const light = quality === "minor" ? 45 : 60;
+    return `hsl(${hue}, ${sat}%, ${light}%)`;
+  }
+
+  function shortChordLabel(label) {
+    if (!label || label === "N") return "N";
+    const parts = label.split(" ");
+    const root = parts[0];
+    const quality = (parts[1] || "").toLowerCase();
+    return quality === "minor" ? `${root}min` : `${root}maj`;
+  }
+
+  function renderChordTimeline(chords, duration) {
+    const tl = document.getElementById("chordTimeline");
+    if (!tl) return;
+    tl.innerHTML = "";
+
+    const dur = Math.max(0.1, duration || (chords[chords.length - 1]?.start || 0));
+    const pxPerSec = Math.min(14, Math.max(4, 600 / dur));
+    const height = Math.round(pxPerSec * dur);
+    tl.style.height = `${height}px`;
+
+    // Minute ticks
+    const minutes = Math.floor(dur / 60);
+    for (let m = 1; m <= minutes; m++) {
+      const tick = document.createElement("div");
+      tick.className = "timeline-tick";
+      tick.style.top = `${Math.round(m * 60 * pxPerSec)}px`;
+      tick.textContent = `${m}m`;
+      tl.appendChild(tick);
+    }
+
+    // Blocks
+    for (let i = 0; i < chords.length; i++) {
+      const start = chords[i].start;
+      const end = i < chords.length - 1 ? chords[i + 1].start : dur;
+      const h = Math.max(2, Math.round((end - start) * pxPerSec));
+      const top = Math.round(start * pxPerSec);
+
+      const block = document.createElement("div");
+      block.className = "timeline-block";
+      block.style.top = `${top}px`;
+      block.style.height = `${h}px`;
+      block.style.background = chordColor(chords[i].chord);
+
+      const label = document.createElement("span");
+      label.className = "timeline-label";
+      label.textContent = shortChordLabel(chords[i].chord);
+
+      block.appendChild(label);
+      tl.appendChild(block);
+    }
+  }
+
+  function renderChordFrequency(chords, duration) {
+    const fq = document.getElementById("chordFrequency");
+    if (!fq) return;
+    fq.innerHTML = "";
+
+    const dur = Math.max(0.1, duration || (chords[chords.length - 1]?.start || 0));
+    const totals = new Map();
+
+    for (let i = 0; i < chords.length; i++) {
+      const start = chords[i].start;
+      const end = i < chords.length - 1 ? chords[i + 1].start : dur;
+      const d = Math.max(0, end - start);
+      const key = chords[i].chord;
+      totals.set(key, (totals.get(key) || 0) + d);
+    }
+
+    // Sort by total duration desc and limit to top 12
+    const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+    // Build bars
+    fq.style.display = "flex";
+    fq.style.alignItems = "flex-end";
+
+    for (const [label, total] of sorted) {
+      const item = document.createElement("div");
+      item.className = "freq-item";
+
+      const line = document.createElement("div");
+      line.className = "freq-line";
+      line.style.height = `${Math.round((total / dur) * 100)}%`;
+      line.style.background = chordColor(label);
+
+      const cap = document.createElement("div");
+      cap.className = "freq-label";
+      cap.textContent = shortChordLabel(label);
+
+      item.appendChild(line);
+      item.appendChild(cap);
+      fq.appendChild(item);
+    }
   }
 
 })();

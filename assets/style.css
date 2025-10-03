@@ -116,3 +116,74 @@ footer {
 .list li {
   margin: 0.15rem 0;
 }
+
+/* Chord timeline (vertical) */
+.timeline {
+  position: relative;
+  width: 140px;
+  border-left: 2px solid rgba(35,39,47,0.2);
+  border-right: 2px solid rgba(35,39,47,0.2);
+  border-radius: 8px;
+  background: #fff;
+  margin: 0.5rem 0;
+  /* Height set dynamically via JS */
+}
+
+.timeline-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.timeline-label {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  font-size: 0.8rem;
+  color: #222;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.timeline-tick {
+  position: absolute;
+  left: -8px;
+  width: calc(100% + 16px);
+  border-top: 1px dashed rgba(35,39,47,0.15);
+  font-size: 0.7rem;
+  color: #666;
+}
+
+/* Frequency lines */
+.freq-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 180px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(35, 39, 47, 0.1);
+  border-radius: 8px;
+}
+
+.freq-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 32px;
+}
+
+.freq-line {
+  width: 8px;
+  border-radius: 4px;
+  background: #888;
+}
+
+.freq-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #444;
+  text-align: center;
+}
