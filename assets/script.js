@@ -575,8 +575,10 @@
   }
 
   function labelSegmentsByChroma(segments, chromaSeries) {
+    // Cluster segments by chroma centroid similarity and assign stable labels (A, B, C, ...)
     const labels = [];
     const centroids = [];
+    const centroidLabels = [];
 
     const labelChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let nextLabelIdx = 0;
@@ -589,6 +591,7 @@
       const sFrame = Math.max(0, Math.floor(seg.start * framesPerSecond));
       const eFrame = Math.min(chromaSeries.length - 1, Math.max(sFrame + 1, Math.floor(seg.end * framesPerSecond)));
 
+      // Compute centroid chroma for the segment
       const centroid = new Float32Array(12);
       let count = 0;
       for (let f = sFrame; f <= eFrame; f++) {
@@ -597,22 +600,28 @@
         for (let k = 0; k < 12; k++) centroid[k] += c[k];
         count++;
       }
-      if (count > 0) for (let k = 0; k < 12; k++) centroid[k] /= count;
+      if (count > 0) {
+        for (let k = 0; k < 12; k++) centroid[k] /= count;
+      }
 
-      // Compare with previous centroids
+      // Try to match with an existing centroid cluster
       let matchedLabel = null;
       for (let j = 0; j < centroids.length; j++) {
         const sim = 1 - chromaDistance(centroid, centroids[j]);
         if (sim >= 0.95) {
-          matchedLabel = labels[j];
+          matchedLabel = centroidLabels[j];
           break;
         }
       }
+
+      // If no match, create a new cluster with a new label
       if (!matchedLabel) {
         matchedLabel = labelChars[nextLabelIdx] || `S${nextLabelIdx + 1}`;
         nextLabelIdx++;
         centroids.push(centroid);
+        centroidLabels.push(matchedLabel);
       }
+
       labels.push(matchedLabel);
     }
 
