@@ -1,5 +1,9 @@
-// Audio Analyzer: BPM, rough structure, chord progression
-// All processing is done client-side using the Web Audio API and simple DSP.
+// Project: Browser-based Audio Analyzer
+// What it does:
+// - Lets you upload an audio file (mp3, wav, m4a, etc.) in the browser.
+// - Estimates BPM (tempo), detects rough song structure (segments), and infers likely chord changes.
+// - Visualizes chords over time (vertical timeline) and their overall frequency.
+// - Runs entirely client-side using the Web Audio API and lightweight DSP; no data leaves your device.
 //
 // Notes:
 // - Estimates are heuristic and may be off for complex mixes.
@@ -15,6 +19,11 @@
   const chordFrequencyEl = document.getElementById("chordFrequency");
   const audioPlayer = document.getElementById("audioPlayer");
   const playerSection = document.getElementById("playerSection");
+
+  // Media visualization elements
+  const waveformCanvas = document.getElementById("waveformCanvas");
+  const spectrogramCanvas = document.getElementById("spectrogramCanvas");
+  const mediaPlayhead = document.getElementById("mediaPlayhead");
 
   const timelineScaleInput = document.getElementById("timelineScale");
   const timelineScaleValueEl = document.getElementById("timelineScaleValue");
@@ -79,6 +88,7 @@
     cancelAnimationFrame(rafId);
     const step = () => {
       updatePlayheadPosition();
+      updateMediaPlayheadPosition();
       rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
@@ -92,6 +102,7 @@
   if (audioPlayer) {
     audioPlayer.addEventListener("play", () => {
       updateTimelinePlayButton();
+      if (mediaPlayhead) mediaPlayhead.style.display = "block";
       startPlayheadAnimation();
     });
     audioPlayer.addEventListener("pause", () => {
@@ -102,8 +113,14 @@
       updateTimelinePlayButton();
       stopPlayheadAnimation();
     });
-    audioPlayer.addEventListener("timeupdate", updatePlayheadPosition);
-    audioPlayer.addEventListener("seeked", updatePlayheadPosition);
+    audioPlayer.addEventListener("timeupdate", () => {
+      updatePlayheadPosition();
+      updateMediaPlayheadPosition();
+    });
+    audioPlayer.addEventListener("seeked", () => {
+      updatePlayheadPosition();
+      updateMediaPlayheadPosition();
+    });
   }
 
   if (!fileInput) {
@@ -131,6 +148,15 @@
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await decodeAudio(arrayBuffer, audioCtx);
 
+      // Draw media overlays
+      try {
+        renderWaveform(audioBuffer);
+        renderSpectrogram(audioBuffer);
+        if (mediaPlayhead) mediaPlayhead.style.display = "block";
+      } catch (e) {
+        console.warn("Media visualization failed:", e);
+      }
+
       setStatus("Analyzing... This can take a few seconds for longer files.");
 
       const analysis = await analyzeAudioBuffer(audioBuffer);
@@ -154,6 +180,23 @@
     if (timelinePlayButton) {
       timelinePlayButton.disabled = true;
       timelinePlayButton.textContent = "Play";
+    }
+    // Clear media visualizations
+    if (waveformCanvas) {
+      const wctx = waveformCanvas.getContext("2d");
+      if (wctx) {
+        wctx.clearRect(0, 0, waveformCanvas.width || waveformCanvas.clientWidth, waveformCanvas.height || waveformCanvas.clientHeight);
+      }
+    }
+    if (spectrogramCanvas) {
+      const sctx = spectrogramCanvas.getContext("2d");
+      if (sctx) {
+        sctx.clearRect(0, 0, spectrogramCanvas.width || spectrogramCanvas.clientWidth, spectrogramCanvas.height || spectrogramCanvas.clientHeight);
+      }
+    }
+    if (mediaPlayhead) {
+      mediaPlayhead.style.display = "none";
+      mediaPlayhead.style.left = "0px";
     }
     lastAnalysis = null;
   }
@@ -873,5 +916,156 @@
       fq.appendChild(item);
     }
   }
+
+// Waveform rendering
+function renderWaveform(audioBuffer) {
+  if (!waveformCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const widthCSS = waveformCanvas.clientWidth || 600;
+  const heightCSS = waveformCanvas.clientHeight || 140;
+  waveformCanvas.width = Math.max(1, Math.floor(widthCSS * dpr));
+  waveformCanvas.height = Math.max(1, Math.floor(heightCSS * dpr));
+  const ctx = waveformCanvas.getContext("2d");
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+
+  const mono = toMono(audioBuffer);
+  const samplesPerPixel = Math.max(1, Math.floor(mono.length / widthCSS));
+  const mid = heightCSS / 2;
+  ctx.clearRect(0, 0, widthCSS, heightCSS);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, widthCSS, heightCSS);
+
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, mid);
+  for (let x = 0; x < widthCSS; x++) {
+    const start = x * samplesPerPixel;
+    const end = Math.min(mono.length, start + samplesPerPixel);
+    let min = 1, max = -1;
+    for (let i = start; i < end; i++) {
+      const v = mono[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const y1 = mid + min * (mid - 2);
+    const y2 = mid + max * (mid - 2);
+    ctx.moveTo(x + 0.5, y1);
+    ctx.lineTo(x + 0.5, y2);
+  }
+  ctx.stroke();
+
+  // Midline
+  ctx.strokeStyle = "rgba(100,116,139,0.5)";
+  ctx.beginPath();
+  ctx.moveTo(0, mid);
+  ctx.lineTo(widthCSS, mid);
+  ctx.stroke();
+}
+
+// Spectrogram rendering (time left->right, freq low->high)
+function renderSpectrogram(audioBuffer) {
+  if (!spectrogramCanvas) return;
+  const widthCSS = spectrogramCanvas.clientWidth || 600;
+  const heightCSS = spectrogramCanvas.clientHeight || 140;
+  // Use CSS pixel sizes directly to avoid transform issues with ImageData
+  spectrogramCanvas.width = Math.max(1, Math.floor(widthCSS));
+  spectrogramCanvas.height = Math.max(1, Math.floor(heightCSS));
+  const ctx = spectrogramCanvas.getContext("2d");
+  if (!ctx) return;
+
+  // Clear background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, widthCSS, heightCSS);
+
+  const sampleRate = audioBuffer.sampleRate;
+  const mono = toMono(audioBuffer);
+
+  const frameSize = 1024;
+  const hopSize = 512;
+  const window = makeHannWindow(frameSize);
+  const nFrames = Math.max(0, 1 + Math.floor((mono.length - frameSize) / hopSize));
+  const mags = new Float32Array(frameSize / 2);
+  const real = new Float32Array(frameSize);
+  const imag = new Float32Array(frameSize);
+
+  // Precompute frequency mapping to canvas rows (log scale up to 5kHz)
+  const maxFreq = 5000;
+  const rows = heightCSS | 0;
+  const binHz = sampleRate / frameSize;
+  const logMin = Math.log(50);
+  const logMax = Math.log(maxFreq);
+
+  function magToRow(bin) {
+    const f = bin * binHz;
+    const lf = Math.log(Math.max(50, Math.min(maxFreq, f)));
+    const t = (lf - logMin) / (logMax - logMin);
+    return Math.min(rows - 1, Math.max(0, Math.round(t * (rows - 1))));
+  }
+
+  // Create image buffer using canvas's intrinsic dimensions
+  const imageData = ctx.createImageData(spectrogramCanvas.width, spectrogramCanvas.height);
+  const data = imageData.data;
+
+  // Map frames to columns; if very few frames, still render at least one per pixel
+  const framesPerPixel = Math.max(1, Math.floor(nFrames / spectrogramCanvas.width));
+  for (let x = 0; x < spectrogramCanvas.width; x++) {
+    const fStart = x * framesPerPixel;
+    const fEnd = Math.min(nFrames, fStart + framesPerPixel);
+    const colAcc = new Float32Array(rows);
+
+    for (let fi = fStart; fi < fEnd; fi++) {
+      const start = fi * hopSize;
+      // Windowed frame
+      for (let j = 0; j < frameSize; j++) {
+        real[j] = (mono[start + j] || 0) * window[j];
+        imag[j] = 0;
+      }
+      fftInPlace(real, imag);
+      // Magnitudes
+      for (let k = 1; k < mags.length; k++) {
+        const re = real[k], im = imag[k];
+        mags[k] = Math.sqrt(re * re + im * im);
+      }
+      // Accumulate magnitudes into rows (using log compression)
+      for (let k = 1; k < mags.length; k++) {
+        const y = magToRow(k);
+        colAcc[y] += Math.log1p(mags[k]);
+      }
+    }
+
+    // Normalize column and write to image data
+    let maxVal = 0;
+    for (let y = 0; y < rows; y++) if (colAcc[y] > maxVal) maxVal = colAcc[y];
+
+    for (let y = 0; y < rows; y++) {
+      const v = maxVal > 0 ? (colAcc[y] / maxVal) : 0;
+      const brightness = Math.pow(v, 0.7); // gamma
+      const r = Math.round(20 + 235 * brightness);
+      const g = Math.round(20 + 225 * brightness);
+      const b = Math.round(30 + 215 * brightness);
+      const idx = (y * spectrogramCanvas.width + x) * 4;
+      data[idx] = r;
+      data[idx + 1] = g;
+      data[idx + 2] = b;
+      data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// Horizontal playhead for media canvases
+function updateMediaPlayheadPosition() {
+  if (!mediaPlayhead || !audioPlayer) return;
+  const dur = audioPlayer.duration || 0;
+  if (dur <= 0) return;
+  const ct = Math.max(0, Math.min(dur, audioPlayer.currentTime || 0));
+  const wfWidth = waveformCanvas?.clientWidth || 0;
+  if (!wfWidth) return;
+  const x = Math.round((ct / dur) * wfWidth);
+  mediaPlayhead.style.left = `${x}px`;
+}
 
 })();

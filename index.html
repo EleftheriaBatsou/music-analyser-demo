@@ -34,8 +34,6 @@
         <div id="structureResults"></div>
       </div>
 
-      
-
       <div class="card">
         <h2>Chord Timeline</h2>
         <div class="timeline-actions">
@@ -47,6 +45,17 @@
           <label for="timelineScale" class="small">Scale</label>
           <input id="timelineScale" type="range" min="8" max="40" step="1" value="18" />
           <span id="timelineScaleValue" class="small">18 px/s</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Waveform & Spectrogram</h2>
+        <div class="media-vis">
+          <canvas id="waveformCanvas"></canvas>
+          <div class="media-caption small">Waveform (time left→right)</div>
+          <canvas id="spectrogramCanvas"></canvas>
+          <div class="media-caption small">Spectrogram (frequency low→high, time left→right)</div>
+          <div id="mediaPlayhead" class="media-playhead" style="display:none;"></div>
         </div>
       </div>
 
